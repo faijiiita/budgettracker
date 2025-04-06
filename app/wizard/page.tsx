@@ -1,6 +1,5 @@
-import { CurrencyComboBox } from "@/components/CurrencyComboBox";
+import CombinedComboBox from "@/components/CombinedComboBox";
 import Logo from "@/components/Logo";
-import { TimezoneComboBox } from "@/components/TimezoneComboBox";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -42,10 +41,7 @@ const WizardPage = async () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-4">
-            <CurrencyComboBox />
-            <TimezoneComboBox />
-          </div>
+          <CombinedComboBox />
         </CardContent>
       </Card>
       <Separator />

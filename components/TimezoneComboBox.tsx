@@ -25,25 +25,75 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { timezonesList, timezoneType } from "@/lib/timezones";
-import { defaultTimezone } from "@/lib/constants";
+import { UserSettings } from "@prisma/client";
+import { useMutation } from "@tanstack/react-query";
+import { UpdateUserTimezone } from "@/app/wizard/_actions/userSettings";
+import { toast } from "sonner";
 
-export function TimezoneComboBox() {
+export function TimezoneComboBox({
+  userSettings,
+}: {
+  userSettings: UserSettings | undefined;
+}) {
   const [open, setOpen] = React.useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [selectedTimezone, setSelectedTimezone] =
     React.useState<timezoneType | null>(null);
 
   React.useEffect(() => {
-    if (!selectedTimezone) {
-      setSelectedTimezone(defaultTimezone);
-    }
-  }, [selectedTimezone]);
+    if (!userSettings) return;
+
+    const userTimezone = timezonesList.find(
+      (timezone) => timezone.tzCode === userSettings.timezone
+    );
+    if (userTimezone) setSelectedTimezone(userTimezone);
+  }, [userSettings]);
+
+  const mutation = useMutation({
+    mutationFn: UpdateUserTimezone,
+    onSuccess: (data: UserSettings) => {
+      toast.success("Timezone updated Successfully 🎉", {
+        id: "update-timezone",
+      });
+
+      setSelectedTimezone(
+        timezonesList.find((t) => t.tzCode === data.timezone) || null
+      );
+    },
+    onError: (e) => {
+      toast.error(`Someting went wrong: ${e.message}`, {
+        id: "update-timezone",
+      });
+    },
+  });
+
+  const selectTimezone = React.useCallback(
+    (timezone: timezoneType | null) => {
+      {
+        if (!timezone) {
+          toast.error("Please select a timezone");
+          return;
+        }
+
+        toast.loading("Updating Timezone...", {
+          id: "update-timezone",
+        });
+
+        mutation.mutate(timezone.tzCode);
+      }
+    },
+    [mutation]
+  );
 
   if (isDesktop) {
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="w-full justify-start">
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            disabled={mutation.isPending}
+          >
             {selectedTimezone ? (
               <>{selectedTimezone.tzCode}</>
             ) : (
@@ -52,10 +102,7 @@ export function TimezoneComboBox() {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[200px] p-0" align="start">
-          <StatusList
-            setOpen={setOpen}
-            setSelectedTimezone={setSelectedTimezone}
-          />
+          <StatusList setOpen={setOpen} setSelectedTimezone={selectTimezone} />
         </PopoverContent>
       </Popover>
     );
@@ -64,7 +111,11 @@ export function TimezoneComboBox() {
   return (
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>
-        <Button variant="outline" className="w-full justify-start">
+        <Button
+          variant="outline"
+          className="w-full justify-start"
+          disabled={mutation.isPending}
+        >
           {selectedTimezone ? (
             <>{selectedTimezone.tzCode}</>
           ) : (
@@ -76,10 +127,7 @@ export function TimezoneComboBox() {
         <DrawerTitle />
         <DrawerDescription />
         <div className="mt-4 border-t">
-          <StatusList
-            setOpen={setOpen}
-            setSelectedTimezone={setSelectedTimezone}
-          />
+          <StatusList setOpen={setOpen} setSelectedTimezone={selectTimezone} />
         </div>
       </DrawerContent>
     </Drawer>
